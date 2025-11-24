@@ -139,7 +139,8 @@ public class MenuScene extends Scene {
             RecordingConfig cfg = new RecordingConfig(path);
             RecordingService svc = new RecordingService(cfg);
             engine.enableRecording(svc);
-        } catch (Exception e) {
+        } 
+        catch (Exception e) {
             
         }
     }
@@ -159,7 +160,7 @@ public class MenuScene extends Scene {
         
         renderer.drawRect(0, 0, width, height, 0.25f, 0.25f, 0.35f, 1.0f);
         
-        super.render();
+        //super.render();
         
         renderMainMenu();
     }
@@ -173,7 +174,7 @@ public class MenuScene extends Scene {
         float centerX = width / 2.0f;
         float centerY = height / 2.0f;
         
-        String title = "GAME ENGINE";
+        String title = "GAME HULU";
         float titleWidth = title.length() * 20.0f;
         float titleX = centerX - titleWidth / 2.0f;
         float titleY = 120.0f;
@@ -228,7 +229,8 @@ public class MenuScene extends Scene {
             renderer.drawText(centerX - w / 2.0f, height - 140, info, 0.9f, 0.8f, 0.2f, 1.0f);
         }
     }
-    
+
+    public IRenderer getRenderer() {return this.renderer;}
     
 }
 

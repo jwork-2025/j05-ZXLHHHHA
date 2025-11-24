@@ -1,7 +1,9 @@
 package com.gameengine.scene;
 
-import com.gameengine.core.GameObject;
 import com.gameengine.core.Component;
+import com.gameengine.core.GameObject;
+import com.gameengine.graphics.IRenderer;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -11,6 +13,13 @@ public class Scene {
     private List<GameObject> objectsToAdd;
     private List<GameObject> objectsToRemove;
     private boolean initialized;
+    protected IRenderer iRenderer;
+
+    public IRenderer getRenderer() {
+        return iRenderer;
+    }
+
+
     
     public Scene(String name) {
         this.name = name;
@@ -19,75 +28,72 @@ public class Scene {
         this.objectsToRemove = new ArrayList<>();
         this.initialized = false;
     }
-    
+
     public void initialize() {
         for (GameObject obj : gameObjects) {
             obj.initialize();
         }
         initialized = true;
     }
-    
+
     public void update(float deltaTime) {
+        // 添加新对象
         for (GameObject obj : objectsToAdd) {
             gameObjects.add(obj);
-            if (initialized) {
-                obj.initialize();
-            }
+            if (initialized) obj.initialize();
         }
         objectsToAdd.clear();
-        
+
+        // 移除对象
         for (GameObject obj : objectsToRemove) {
             gameObjects.remove(obj);
         }
         objectsToRemove.clear();
-        
+
+        // 更新对象
         Iterator<GameObject> iterator = gameObjects.iterator();
         while (iterator.hasNext()) {
             GameObject obj = iterator.next();
-            if (obj.isActive()) {
-                obj.update(deltaTime);
-            } else {
-                iterator.remove();
-            }
+            if (obj.isActive()) obj.update(deltaTime);
+            else iterator.remove();
         }
     }
-    
+
     public void render() {
         for (GameObject obj : gameObjects) {
-            if (obj.isActive()) {
-                obj.render();
-            }
+            if (obj.isActive()) obj.render();
         }
     }
-    
+
     public void addGameObject(GameObject gameObject) {
         objectsToAdd.add(gameObject);
     }
-    
+
     public <T extends Component<T>> List<GameObject> findGameObjectsByComponent(Class<T> componentType) {
         return gameObjects.stream()
-            .filter(obj -> obj.hasComponent(componentType))
-            .collect(Collectors.toList());
+                .filter(obj -> obj.hasComponent(componentType))
+                .collect(Collectors.toList());
     }
-    
+
     public <T extends Component<T>> List<T> getComponents(Class<T> componentType) {
         return findGameObjectsByComponent(componentType).stream()
-            .map(obj -> obj.getComponent(componentType))
-            .filter(Objects::nonNull)
-            .collect(Collectors.toList());
+                .map(obj -> obj.getComponent(componentType))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
-    
+
     public void clear() {
         gameObjects.clear();
         objectsToAdd.clear();
         objectsToRemove.clear();
     }
-    
+
     public String getName() {
         return name;
     }
-    
+
     public List<GameObject> getGameObjects() {
         return new ArrayList<>(gameObjects);
     }
+
 }

@@ -1,7 +1,9 @@
 package com.gameengine.example;
 
+import com.gameengine.components.HealthComponent;
 import com.gameengine.components.PhysicsComponent;
 import com.gameengine.components.RenderComponent;
+import com.gameengine.components.ShootingComponent;
 import com.gameengine.components.TransformComponent;
 import com.gameengine.core.GameEngine;
 import com.gameengine.core.GameLogic;
@@ -10,7 +12,6 @@ import com.gameengine.core.ParticleSystem;
 import com.gameengine.graphics.IRenderer;
 import com.gameengine.math.Vector2;
 import com.gameengine.scene.Scene;
-
 import java.util.*;
 
 public class GameScene extends Scene {
@@ -46,7 +47,8 @@ public class GameScene extends Scene {
         this.freezeTimer = 0f;
 
         createPlayer();
-        createAIPlayers();
+        //createAIPlayer();
+        //createAIPlayers();
         createDecorations();
 
         collisionParticles = new ArrayList<>();
@@ -68,6 +70,8 @@ public class GameScene extends Scene {
 
         boolean wasGameOver = gameLogic.isGameOver();
         gameLogic.checkCollisions();
+        gameLogic.checkBulletCollisions();
+        gameLogic.cleanupDeadObjects();
 
         if (gameLogic.isGameOver() && !wasGameOver) {
             GameObject player = gameLogic.getUserPlayer();
@@ -112,10 +116,13 @@ public class GameScene extends Scene {
             return;
         }
 
+        
+        
         if (time >= 1.0f) {
             createAIPlayer();
             time = 0;
         }
+        
     }
 
     private void updateParticles(float deltaTime) {
@@ -215,7 +222,7 @@ public class GameScene extends Scene {
             }
         }
     }
-
+    
     private void createPlayer() {
         GameObject player = new GameObject("Player") {
             private Vector2 basePosition;
@@ -230,6 +237,8 @@ public class GameScene extends Scene {
             @Override
             public void render() {
                 renderBodyParts();
+                // 渲染组件（血条、射击）
+                renderComponents();
             }
 
             private void updateBodyParts() {
@@ -242,32 +251,33 @@ public class GameScene extends Scene {
             private void renderBodyParts() {
                 if (basePosition == null) return;
 
-                renderer.drawRect(
-                    basePosition.x - 8, basePosition.y - 10, 16, 20,
-                    1.0f, 0.0f, 0.0f, 1.0f
-                );
+                // 身体和装饰
+                renderer.drawRect(basePosition.x - 8, basePosition.y - 10, 16, 20, 1f, 0f, 0f, 1f);
+                renderer.drawRect(basePosition.x - 6, basePosition.y - 22, 12, 12, 1f, 0.5f, 0f, 1f);
+                renderer.drawRect(basePosition.x - 13, basePosition.y - 5, 6, 12, 1f, 0.8f, 0f, 1f);
+                renderer.drawRect(basePosition.x + 7, basePosition.y - 5, 6, 12, 0f, 1f, 0f, 1f);
 
-                renderer.drawRect(
-                    basePosition.x - 6, basePosition.y - 22, 12, 12,
-                    1.0f, 0.5f, 0.0f, 1.0f
-                );
-
-                renderer.drawRect(
-                    basePosition.x - 13, basePosition.y - 5, 6, 12,
-                    1.0f, 0.8f, 0.0f, 1.0f
-                );
-
-                renderer.drawRect(
-                    basePosition.x + 7, basePosition.y - 5, 6, 12,
-                    0.0f, 1.0f, 0.0f, 1.0f
-                );
+                
             }
         };
 
-        player.addComponent(new TransformComponent(new Vector2(renderer.getWidth() / 2.0f, renderer.getHeight() / 2.0f)));
+        //设定场景
+        player.setScene(this);
 
-        PhysicsComponent physics = player.addComponent(new PhysicsComponent(1.0f));
+        // Transform
+        player.addComponent(new TransformComponent(new Vector2(renderer.getWidth() / 2f, renderer.getHeight() / 2f)));
+
+        // Physics
+        PhysicsComponent physics = player.addComponent(new PhysicsComponent(1f));
         physics.setFriction(0.95f);
+
+        // Health
+        HealthComponent health = player.addComponent(new HealthComponent(100));
+        health.setShowHealthBar(true);
+        health.setHealthBarSize(30, 6);
+
+        // Shooting（手动射击）
+        ShootingComponent shooting = player.addComponent(new ShootingComponent(0.3f, 600f, 15, false));
 
         addGameObject(player);
     }
@@ -278,8 +288,9 @@ public class GameScene extends Scene {
         }
     }
 
+    private static int aiPlayerCount = 0;
     private void createAIPlayer() {
-        GameObject aiPlayer = new GameObject("AIPlayer") {
+        GameObject aiPlayer = new GameObject("AIPlayer"+aiPlayerCount++) {
             @Override
             public void update(float deltaTime) {
                 super.update(deltaTime);
@@ -294,39 +305,51 @@ public class GameScene extends Scene {
 
         Vector2 position;
         do {
-            position = new Vector2(
-                random.nextFloat() * renderer.getWidth(),
-                random.nextFloat() * renderer.getHeight()
-            );
-        } while (position.distance(new Vector2(renderer.getWidth() / 2.0f, renderer.getHeight() / 2.0f)) < 100);
+            position = new Vector2(random.nextFloat() * renderer.getWidth(), random.nextFloat() * renderer.getHeight());
+        } while (position.distance(new Vector2(renderer.getWidth() / 2f, renderer.getHeight() / 2f)) < 100);
 
+        aiPlayer.setScene(this);
+
+        // Transform
         aiPlayer.addComponent(new TransformComponent(position));
-        // 使用工厂统一外观
+
+        
+
+        // Render
         RenderComponent rc = aiPlayer.addComponent(new RenderComponent(
-            RenderComponent.RenderType.RECTANGLE,
-            new Vector2(20, 20),
-            new RenderComponent.Color(0.0f, 0.8f, 1.0f, 1.0f)
+                RenderComponent.RenderType.RECTANGLE,
+                new Vector2(20, 20),
+                new RenderComponent.Color(0f, 0.8f, 1f, 1f)
         ));
         rc.setRenderer(renderer);
 
+        // Physics
         PhysicsComponent physics = aiPlayer.addComponent(new PhysicsComponent(0.5f));
-        physics.setVelocity(new Vector2(
-            (random.nextFloat() - 0.5f) * 150,
-            (random.nextFloat() - 0.5f) * 150
-        ));
+        physics.setVelocity(new Vector2((random.nextFloat() - 0.5f) * 150, (random.nextFloat() - 0.5f) * 150));
         physics.setFriction(0.98f);
+
+        // Health
+        HealthComponent health = aiPlayer.addComponent(new HealthComponent(50));
+        health.setShowHealthBar(true);
+        health.setHealthBarSize(30, 6);
+
+        // Shooting（自动射击玩家）
+        ShootingComponent shooting = aiPlayer.addComponent(new ShootingComponent(5f, 100f, 10, true));
 
         addGameObject(aiPlayer);
     }
 
+
+    
     private void createDecorations() {
         for (int i = 0; i < 5; i++) {
             createDecoration();
         }
     }
 
+    private static int decorationCount = 0;
     private void createDecoration() {
-        GameObject decoration = new GameObject("Decoration") {
+        GameObject decoration = new GameObject("Decoration"+decorationCount++) {
             @Override
             public void update(float deltaTime) {
                 super.update(deltaTime);
@@ -344,6 +367,8 @@ public class GameScene extends Scene {
             random.nextFloat() * renderer.getHeight()
         );
 
+        //
+        decoration.setScene(this);
         decoration.addComponent(new TransformComponent(position));
 
         RenderComponent render = decoration.addComponent(new RenderComponent(
@@ -361,6 +386,7 @@ public class GameScene extends Scene {
         if (gameLogic != null) {
             gameLogic.cleanup();
         }
+        
         if (playerParticles != null) {
             playerParticles.clear();
         }
@@ -370,8 +396,10 @@ public class GameScene extends Scene {
             }
             collisionParticles.clear();
         }
+        
         super.clear();
     }
-}
 
+    public IRenderer getRenderer() {return this.renderer;}
+}
 

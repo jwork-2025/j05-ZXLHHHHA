@@ -4,7 +4,6 @@ import com.gameengine.components.TransformComponent;
 import com.gameengine.core.GameObject;
 import com.gameengine.input.InputManager;
 import com.gameengine.scene.Scene;
-
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.List;
@@ -164,5 +163,4 @@ public class RecordingService {
         }
     }
 }
-
 

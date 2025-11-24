@@ -1,11 +1,12 @@
 package com.gameengine.core;
 
+import com.gameengine.components.BulletComponent;
+import com.gameengine.components.HealthComponent;
 import com.gameengine.components.PhysicsComponent;
 import com.gameengine.components.TransformComponent;
 import com.gameengine.input.InputManager;
 import com.gameengine.math.Vector2;
 import com.gameengine.scene.Scene;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -71,7 +72,7 @@ public class GameLogic {
     
     public List<GameObject> getAIPlayers() {
         return scene.getGameObjects().stream()
-            .filter(obj -> obj.getName().equals("AIPlayer"))
+            .filter(obj -> obj.getName().startsWith("AIPlayer"))
             .filter(obj -> obj.isActive())
             .collect(Collectors.toList());
     }
@@ -267,28 +268,124 @@ public class GameLogic {
             physics1.setVelocity(newVelocity);
         }
     }
-    
     public void checkCollisions() {
-        if (gameOver) return;
-        
-        GameObject userPlayer = getUserPlayer();
-        if (userPlayer == null) return;
-        
-        TransformComponent playerTransform = userPlayer.getComponent(TransformComponent.class);
+        GameObject player = getUserPlayer();
+        if (player == null) return;
+
+        HealthComponent playerHealth = player.getComponent(HealthComponent.class);
+        if (playerHealth == null || playerHealth.isDead()) {
+            gameOver = true; // 玩家死才算游戏结束
+            return;
+        }
+
+        TransformComponent playerTransform = player.getComponent(TransformComponent.class);
         if (playerTransform == null) return;
-        
         Vector2 playerPos = playerTransform.getPosition();
-        
+
         List<GameObject> aiPlayers = getAIPlayers();
         for (GameObject aiPlayer : aiPlayers) {
+            HealthComponent aiHealth = aiPlayer.getComponent(HealthComponent.class);
             TransformComponent aiTransform = aiPlayer.getComponent(TransformComponent.class);
-            if (aiTransform != null) {
+            if (aiHealth != null && !aiHealth.isDead() && aiTransform != null) {
                 float distance = playerPos.distance(aiTransform.getPosition());
                 if (distance < 30) {
-                    gameOver = true;
-                    return;
+                    
+                    playerHealth.takeDamage(10); // 碰撞扣血，数值可调整
+                    //aiHealth.takeDamage(10);
+                }
+            }
+        }
+
+        // 再检查玩家是否死
+        if (playerHealth.isDead()) {
+            player.setActive(false);
+            gameOver = true;
+            
+        }
+    }
+
+    public void checkBulletCollisions() {
+        List<GameObject> bullets = scene.getGameObjects().stream()
+            .filter(obj -> obj.getComponent(BulletComponent.class) != null && obj.isActive())
+            .collect(Collectors.toList());
+
+        for (GameObject bulletObj : bullets) {
+            BulletComponent bullet = bulletObj.getComponent(BulletComponent.class);
+            if (bullet == null) continue;
+
+            TransformComponent bulletTransform = bulletObj.getComponent(TransformComponent.class);
+            if (bulletTransform == null) continue;
+
+            Vector2 bulletPos = bulletTransform.getPosition();
+
+            GameObject shooter = bullet.getShooter();
+
+            // 玩家被敌人子弹击中
+            if (!shooter.getName().equals("Player")) {
+                GameObject player = getUserPlayer();
+                if (player != null) {
+                    HealthComponent playerHealth = player.getComponent(HealthComponent.class);
+                    Vector2 playerPos = player.getComponent(TransformComponent.class).getPosition();
+                    if (playerHealth != null && !playerHealth.isDead() && bulletPos.distance(playerPos) < 15) {
+                        bullet.onHit(player);
+                    }
+                }
+            }
+            
+            // 敌人被玩家子弹击中
+            if (shooter.getName().equals("Player")) {
+                //System.out.println("shoottttt");
+                for (GameObject enemy : getAIPlayers()) {
+                    HealthComponent aiHealth = enemy.getComponent(HealthComponent.class);
+                    TransformComponent aiTransform = enemy.getComponent(TransformComponent.class);
+                    if (aiHealth != null && !aiHealth.isDead() && aiTransform != null) {
+                        Vector2 enemyPos = aiTransform.getPosition();
+                        if (bulletPos.distance(enemyPos) < 15) {
+                            bullet.onHit(enemy);
+                            System.out.println("Enemy hit! HP left: " + aiHealth.getCurrentHealth());
+                        }
+                    }
+                    if(aiHealth.isDead())
+                    {
+                        enemy.setActive(false);
+                    }
                 }
             }
         }
     }
+    /**
+ * 清理死亡或无效对象（AI、子弹、Inactive 对象）
+ */
+    public void cleanupDeadObjects() {
+        List<GameObject> objects = scene.getGameObjects();
+
+        // 1. 清除死掉的 AIPlayer
+        objects.removeIf(obj -> {
+            if (obj.getName().equals("AIPlayer")) {
+                HealthComponent hp = obj.getComponent(HealthComponent.class);
+                return hp != null && hp.isDead();
+            }
+            return false;
+        });
+
+        
+
+        // 2. 清除飞出屏幕的子弹
+        objects.removeIf(obj -> {
+            BulletComponent bullet = obj.getComponent(BulletComponent.class);
+            if (bullet == null) return false;
+
+            TransformComponent t = obj.getComponent(TransformComponent.class);
+            if (t == null) return true; // 没 Transform 直接删
+
+            Vector2 pos = t.getPosition();
+            int w = gameEngine.getRenderer().getWidth();
+            int h = gameEngine.getRenderer().getHeight();
+
+            // 超出屏幕 50 像素就清除（避免卡边）
+            return pos.x < -50 || pos.x > w + 50 || pos.y < -50 || pos.y > h + 50;
+        });
+    }
+
+
 }

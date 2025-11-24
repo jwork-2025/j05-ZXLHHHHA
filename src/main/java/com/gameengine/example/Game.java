@@ -15,7 +15,8 @@ public class Game {
             MenuScene menuScene = new MenuScene(engine, "MainMenu");
             engine.setScene(menuScene);
             engine.run();
-        } catch (Exception e) {
+        } 
+        catch (Exception e) {
             System.err.println("游戏运行出错: " + e.getMessage());
             e.printStackTrace();
         } finally {

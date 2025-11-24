@@ -9,8 +9,13 @@ import com.gameengine.math.Vector2;
 public final class EntityFactory {
     private EntityFactory() {}
 
+
+    private static int aiCount = 0;
+    private static int bulletCount = 0;
+
     public static GameObject createPlayerVisual(IRenderer renderer) {
-        return new GameObject("Player") {
+        String id = "Player"; 
+        return new GameObject(id) {
             private Vector2 basePosition;
             @Override
             public void update(float dt) {
@@ -30,7 +35,8 @@ public final class EntityFactory {
     }
 
     public static GameObject createAIVisual(IRenderer renderer, float w, float h, float r, float g, float b, float a) {
-        GameObject obj = new GameObject("AIPlayer");
+        String id = "AIPlayer" + aiCount++;
+        GameObject obj = new GameObject(id);
         TransformComponent tc = obj.addComponent(new TransformComponent(new Vector2(0, 0)));
         RenderComponent rc = obj.addComponent(new RenderComponent(
             RenderComponent.RenderType.RECTANGLE,
@@ -40,6 +46,33 @@ public final class EntityFactory {
         rc.setRenderer(renderer);
         return obj;
     }
+
+    public static GameObject createBulletVisual(IRenderer renderer, float w, float h, float r, float g, float b, float a) {
+        String id = "Bullet" + bulletCount++;
+        System.out.println("bulletcol:"+"r:"+r+"g:"+g+"b:"+b+"a:"+a);
+        GameObject obj = new GameObject(id);
+        TransformComponent tc = obj.addComponent(new TransformComponent(new Vector2(0, 0)));
+        RenderComponent rc = obj.addComponent(new RenderComponent(
+            RenderComponent.RenderType.CIRCLE,
+            new Vector2(Math.max(1, w), Math.max(1, h)),
+            new RenderComponent.Color(r, g, b, a)
+        ));
+        rc.setRenderer(renderer);
+        return obj;
+    }
+
+    private static int decorationCount = 0;
+    public static GameObject createDecorationVisual(IRenderer renderer, float w, float h, float r, float g, float b, float a) {
+        String id = "Decoration"+decorationCount++ ;
+        GameObject obj = new GameObject(id);
+        TransformComponent tc = obj.addComponent(new TransformComponent(new Vector2(0, 0)));
+        RenderComponent rc = obj.addComponent(new RenderComponent(
+            RenderComponent.RenderType.CIRCLE,
+            new Vector2(Math.max(1, w), Math.max(1, h)),
+            new RenderComponent.Color(r, g, b, a)
+        ));
+        rc.setRenderer(renderer);
+        return obj;
+    }
+
 }
-
-

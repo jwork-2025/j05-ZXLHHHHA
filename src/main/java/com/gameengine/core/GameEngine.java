@@ -144,8 +144,9 @@ public class GameEngine {
         if (scene != null) {
             if (running) {
                 scene.initialize();
-                if (!scene.getName().equals("MainMenu") && !scene.getName().equals("Replay")) {
-                    physicsSystem = new PhysicsSystem(scene, renderer.getWidth(), renderer.getHeight());
+                if (!scene.getName().equals("MainMenu") && !scene.getName().equals("Replay")) 
+                {
+                    physicsSystem = new PhysicsSystem(scene, renderer.getWidth(), renderer.getHeight());//在游戏中创建了物理系统
                 }
             }
         }
