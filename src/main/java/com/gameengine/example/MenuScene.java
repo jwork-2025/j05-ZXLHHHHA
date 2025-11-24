@@ -67,15 +67,28 @@ public class MenuScene extends Scene {
         }
     }
     
-    private void handleMenuSelection() {
-        if (inputManager.isKeyJustPressed(38)) {
+   private void handleMenuSelection() {
+        // 上移：↑ / W
+        if (inputManager.isKeyJustPressed(38) || inputManager.isKeyJustPressed(87)) {
             selectedIndex = (selectedIndex - 1 + options.length) % options.length;
-        } else if (inputManager.isKeyJustPressed(40)) {
+        } 
+        // 下移：↓ / S
+        else if (inputManager.isKeyJustPressed(40) || inputManager.isKeyJustPressed(83)) {
             selectedIndex = (selectedIndex + 1) % options.length;
-        } else if (inputManager.isKeyJustPressed(10) || inputManager.isKeyJustPressed(32)) {
+        } 
+        // 左移：← / A （如果菜单支持左右选择，可使用）
+        else if (inputManager.isKeyJustPressed(37) || inputManager.isKeyJustPressed(65)) {
+            selectedIndex = (selectedIndex - 1 + options.length) % options.length;
+        } 
+        // 右移：→ / D （如果菜单支持左右选择，可使用）
+        else if (inputManager.isKeyJustPressed(39) || inputManager.isKeyJustPressed(68)) {
+            selectedIndex = (selectedIndex + 1) % options.length;
+        } 
+        // 确认：Enter / Space / E
+        else if (inputManager.isKeyJustPressed(10) || inputManager.isKeyJustPressed(32) || inputManager.isKeyJustPressed(69)) {
             selectionMade = true;
             selectedOption = options[selectedIndex];
-            
+
             if (selectedOption == MenuOption.REPLAY) {
                 engine.disableRecording();
                 Scene replay = new ReplayScene(engine, null);
@@ -86,14 +99,20 @@ public class MenuScene extends Scene {
                 System.exit(0);
             }
         }
-        
+        // 取消/返回：ESC / Q
+        else if (inputManager.isKeyJustPressed(27) || inputManager.isKeyJustPressed(81)) {
+            // 返回主菜单
+            engine.setScene(new MenuScene(engine, "MainMenu"));
+        }
+
+        // --- 鼠标逻辑保持不变 ---
         Vector2 mousePos = inputManager.getMousePosition();
         if (inputManager.isMouseButtonJustPressed(0)) {
             float centerY = renderer.getHeight() / 2.0f;
             float buttonY1 = centerY - 80;
             float buttonY2 = centerY + 0;
             float buttonY3 = centerY + 80;
-            
+
             if (mousePos.y >= buttonY1 - 30 && mousePos.y <= buttonY1 + 30) {
                 selectedIndex = 0;
                 selectionMade = true;
@@ -114,6 +133,7 @@ public class MenuScene extends Scene {
             }
         }
     }
+
 
     private String findLatestRecording() {
         File dir = new File("recordings");
