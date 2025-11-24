@@ -24,6 +24,8 @@ public class ReplayScene extends Scene {
             float w, h;
             float r = 0.9f, g = 0.9f, b = 0.2f, a = 1.0f; // 默认颜色
             String id;
+            float hp = 100f;  
+            float maxHp = 100f; 
         }
         double t;
         List<EntityInfo> entities = new ArrayList<>();
@@ -58,7 +60,7 @@ public class ReplayScene extends Scene {
     public void update(float deltaTime) {
         super.update(deltaTime);
 
-        if (input.isKeyJustPressed(27) || input.isKeyJustPressed(8)) { // ESC/BACK
+        if (input.isKeyJustPressed(27) || input.isKeyJustPressed(256) || input.isKeyJustPressed(8)) { // ESC/BACK
             engine.setScene(new MenuScene(engine, "MainMenu"));
             return;
         }
@@ -72,7 +74,11 @@ public class ReplayScene extends Scene {
 
         time += deltaTime;
         double lastT = keyframes.get(keyframes.size() - 1).t;
-        if (time > lastT) time = (float) lastT;
+        if (time > lastT) 
+        {
+            time = (float) lastT;
+        }
+            
 
         // 查找当前帧对应的 keyframe 区间 a->b
         Keyframe a = keyframes.get(0);
@@ -91,16 +97,55 @@ public class ReplayScene extends Scene {
 
     @Override
     public void render() {
+        // 背景
         renderer.drawRect(0, 0, renderer.getWidth(), renderer.getHeight(), 0.06f, 0.06f, 0.08f, 1.0f);
+
         if (recordingPath == null) {
             renderFileList();
             return;
         }
+
         super.render();
+
+        for (Map.Entry<String, GameObject> entry : objectMap.entrySet()) {
+            GameObject obj = entry.getValue();
+            Keyframe.EntityInfo ei = findEntityInfo(obj.getName());
+            if (ei == null) continue;
+
+            // 只给 Player 和 AIPlayer 显示血条
+            if (!ei.id.equalsIgnoreCase("Player") && !ei.id.startsWith("AIPlayer")) continue;
+
+            // 血条位置在对象上方
+            float barWidth = 30f;
+            float barHeight = 6f;
+            TransformComponent tc = obj.getComponent(TransformComponent.class);
+            Vector2 pos = (tc != null ? tc.getPosition() : ei.pos);
+            float x,y;
+            if(ei.id.equalsIgnoreCase("Player"))
+            {
+                x = pos.x - barWidth / 2f;
+                y= pos.y - 30;
+            }
+            else{
+                x = pos.x - barWidth / 2f;
+                y = pos.y - ei.h / 2f - 10f;
+            }
+            
+
+            // 红色背景
+            renderer.drawRect(x, y, barWidth, barHeight, 0.8f, 0.0f, 0.0f, 1.0f);
+
+            // 绿色前景显示血量
+            float hpPercent = Math.max(0f, Math.min(1f, ei.hp / ei.maxHp));
+            renderer.drawRect(x, y, barWidth * hpPercent, barHeight, 0.0f, 1.0f, 0.0f, 1.0f);
+        }
+        
+        // 提示文字
         String hint = "REPLAY: ESC to return";
         float w = hint.length() * 12.0f;
         renderer.drawText(renderer.getWidth() / 2.0f - w / 2.0f, 30, hint, 0.8f, 0.8f, 0.8f, 1.0f);
     }
+
 
     private void loadRecording(String path) {
         keyframes.clear();
@@ -158,6 +203,11 @@ public class ReplayScene extends Scene {
                             } catch (Exception ignored) {}
                         }
 
+                        ei.hp = (float) com.gameengine.recording.RecordingJson.parseDouble(
+                                com.gameengine.recording.RecordingJson.field(p, "hp"));
+                        ei.maxHp = (float) com.gameengine.recording.RecordingJson.parseDouble(
+                                com.gameengine.recording.RecordingJson.field(p, "maxHp"));
+
                         kf.entities.add(ei);
                     }
                 }
@@ -167,6 +217,24 @@ public class ReplayScene extends Scene {
         } catch (Exception ignored) {}
 
         keyframes.sort((k1, k2) -> Double.compare(k1.t, k2.t));
+    }
+
+
+    private Keyframe.EntityInfo findEntityInfo(String id) {
+        if (keyframes.isEmpty()) return null;
+
+        Keyframe kf = keyframes.get(keyframes.size() - 1); // 默认最后一帧
+        for (int i = 0; i < keyframes.size() - 1; i++) {
+            if (time >= keyframes.get(i).t && time <= keyframes.get(i+1).t) {
+                kf = keyframes.get(i+1); // 取靠后的帧
+                break;
+            }
+        }
+
+        for (Keyframe.EntityInfo ei : kf.entities) {
+            if (ei.id.equals(id)) return ei;
+        }
+        return null;
     }
 
 
@@ -205,16 +273,22 @@ public class ReplayScene extends Scene {
         }
 
         // 移除 a 和 b 中不再出现的对象（死亡）
+        // 移除不再出现的对象
         Set<String> aliveIds = new HashSet<>();
         for (Keyframe.EntityInfo ei : b.entities) aliveIds.add(ei.id);
+
+        // 保留 Player
+        aliveIds.add("Player"); 
+
         Iterator<Map.Entry<String, GameObject>> it = objectMap.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<String, GameObject> entry = it.next();
             if (!aliveIds.contains(entry.getKey())) {
-                entry.getValue().setActive(false); // 或者 engine.removeGameObject(entry.getValue());
+                entry.getValue().setActive(false);
                 it.remove();
             }
         }
+
     }
 
     private GameObject buildObjectFromEntity(Keyframe.EntityInfo ei) {

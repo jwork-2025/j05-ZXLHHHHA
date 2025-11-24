@@ -290,7 +290,7 @@ public class GameLogic {
                 float distance = playerPos.distance(aiTransform.getPosition());
                 if (distance < 30) {
                     
-                    playerHealth.takeDamage(10); // 碰撞扣血，数值可调整
+                    playerHealth.takeDamage(1); // 碰撞扣血，数值可调整
                     //aiHealth.takeDamage(10);
                 }
             }

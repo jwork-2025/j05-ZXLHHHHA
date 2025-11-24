@@ -105,26 +105,32 @@ public class ShootingComponent extends Component<ShootingComponent> {
 
     private  static int BulletCount = 0;
     private void createBullet(Vector2 position, Vector2 direction) {
-        GameObject bullet = new GameObject("Bullet"+BulletCount);
-        BulletCount++;
-        bullet.addComponent(new TransformComponent(position.add(direction.multiply(20))));
+        GameObject bullet = new GameObject("Bullet" + BulletCount++);
+        // 1. 直接放在玩家位置
+        bullet.addComponent(new TransformComponent(new Vector2(position)));
+
+        // 2. 渲染
         RenderComponent render = new RenderComponent(RenderComponent.RenderType.CIRCLE, new Vector2(8,8),
-                getOwner().getName().equals("Player")
-                        ? new RenderComponent.Color(0,0.5f,1f,1f)
-                        : new RenderComponent.Color(1f,0.3f,0.3f,1f));
+            getOwner().getName().equals("Player")
+                ? new RenderComponent.Color(0,0.5f,1f,1f)
+                : new RenderComponent.Color(1f,0.3f,0.3f,1f));
         render.setRenderer(getOwner().getScene().getRenderer());
         bullet.addComponent(render);
 
-        PhysicsComponent physics = new PhysicsComponent(0.1f);
+        // 3. 物理恒速
+        PhysicsComponent physics = new PhysicsComponent(0);
         physics.setVelocity(direction.multiply(bulletSpeed));
-        physics.setFriction(1.0f);
+        physics.setFriction(1.0f); // 保持恒速
         bullet.addComponent(physics);
 
+        // 4. 子弹逻辑
         bullet.addComponent(new BulletComponent(bulletDamage, getOwner()));
 
+        // 5. 添加到场景
         Scene scene = getOwner().getScene();
         if (scene != null) scene.addGameObject(bullet);
     }
+
 
     // Getters & Setters
     public float getFireRate() { return fireRate; }

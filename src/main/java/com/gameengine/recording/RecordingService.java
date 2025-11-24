@@ -1,5 +1,6 @@
 package com.gameengine.recording;
 
+import com.gameengine.components.HealthComponent;
 import com.gameengine.components.TransformComponent;
 import com.gameengine.core.GameObject;
 import com.gameengine.input.InputManager;
@@ -127,6 +128,8 @@ public class RecordingService {
               .append("\"x\":").append(qfmt.format(x)).append(',')
               .append("\"y\":").append(qfmt.format(y));
 
+
+            
             // 可选渲染信息（若对象带有 RenderComponent，则记录形状、尺寸、颜色）
             com.gameengine.components.RenderComponent rc = obj.getComponent(com.gameengine.components.RenderComponent.class);
             if (rc != null) {
@@ -146,6 +149,15 @@ public class RecordingService {
                 // 标记自定义渲染（如 Player），方便回放做近似还原
                 sb.append(',').append("\"rt\":\"CUSTOM\"");
             }
+            float hp = 100f;
+            float maxHp = 100f;
+            HealthComponent hc = obj.getComponent(HealthComponent.class);
+            if (hc != null) {
+                hp = hc.getCurrentHealth();
+                maxHp = hc.getMaxHealth();
+            }
+            sb.append(",\"hp\":").append(hp)
+            .append(",\"maxHp\":").append(maxHp);
 
             sb.append('}');
             first = false;
